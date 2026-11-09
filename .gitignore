@@ -1,0 +1,24 @@
+﻿# Entornos virtuales
+venv/
+env/
+.venv/
+__pycache__/
+*.pyc
+
+# Variables de entorno y credenciales (REGLA DE ORO: NUNCA SUBIR CLAVES)
+.env
+.env.local
+*.key
+credentials.json
+
+# IDEs y editores
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Archivos temporales
+*.log
+temp_repo/
+*.zip
