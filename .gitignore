@@ -1,4 +1,4 @@
-﻿# Entornos virtuales
+# Entornos virtuales
 venv/
 env/
 .venv/
@@ -22,3 +22,4 @@ credentials.json
 *.log
 temp_repo/
 *.zip
+cloudflared.exe

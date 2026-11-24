@@ -10,3 +10,9 @@ showErrorDetails = false
 
 [browser]
 gatherUsageStats = false
+
+[server]
+enableCORS = false
+enableXsrfProtection = false
+headless = true
+port = 8501
