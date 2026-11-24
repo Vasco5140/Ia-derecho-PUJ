@@ -122,6 +122,35 @@ MODELOS_GRATIS_DISPONIBLES = [
     "google/gemma-4-26b-a4b-it:free",
 ]
 
+def obtener_api_key_sistema():
+    # 1. Variables de entorno locales (.env)
+    key = os.getenv("OPENROUTER_API_KEY", "")
+    # 2. Secretos de Streamlit Cloud (st.secrets)
+    if not key:
+        try:
+            if hasattr(st, "secrets") and "OPENROUTER_API_KEY" in st.secrets:
+                key = str(st.secrets["OPENROUTER_API_KEY"])
+        except Exception:
+            pass
+    return key.strip()
+
+def verificar_conexion_openrouter(api_key):
+    try:
+        r = requests.get(
+            "https://openrouter.ai/api/v1/auth/key",
+            headers={"Authorization": f"Bearer {api_key.strip()}"},
+            timeout=8
+        )
+        if r.status_code == 200:
+            data = r.json().get("data", {})
+            free_reqs = data.get("free_model_daily_requests", {})
+            restantes = free_reqs.get("remaining", "OK")
+            return True, f"Clave 100% activa. Consultas libres restantes hoy: {restantes}"
+        else:
+            return False, f"OpenRouter respondió código {r.status_code}: {r.text[:80]}"
+    except Exception as e:
+        return False, f"Error de conexión: {str(e)}"
+
 def consultar_ia(mensaje_usuario, historial, api_key, modelo_preferido="nvidia/nemotron-3.5-lightning:free"):
     # 1. Recuperación RAG de fuentes normativas
     fuentes = recuperar_fuentes_rag(mensaje_usuario)
@@ -164,7 +193,7 @@ CORPUS NORMATIVO RECUPERADO MEDIANTE RAG (CITA OBLIGATORIA):
 {contexto_normativo if contexto_normativo else "No se recuperaron normas específicas para esta consulta."}
 """
 
-    clave_limpia = (api_key or os.getenv("OPENROUTER_API_KEY", "")).strip()
+    clave_limpia = (api_key or obtener_api_key_sistema()).strip()
 
     if clave_limpia:
         headers = {
@@ -252,12 +281,12 @@ with st.sidebar:
 
     st.divider()
     st.subheader("🤖 Configuración de IA (OpenRouter)")
-    api_key_val = os.getenv("OPENROUTER_API_KEY", "")
+    api_key_val = obtener_api_key_sistema()
     api_key_input = st.text_input(
         "OPENROUTER_API_KEY:",
         type="password",
         value=api_key_val,
-        help="Clave para acceder a los modelos LLM en OpenRouter. Se precarga desde el archivo .env."
+        help="Clave para acceder a los modelos LLM en OpenRouter. Precargada automáticamente."
     )
 
     modelo_seleccionado = st.selectbox(
@@ -269,7 +298,14 @@ with st.sidebar:
 
     if api_key_input:
         st.success("🟢 Modo IA Conectado")
-        st.caption("⚡ Incluye respaldo automático en caso de saturación temporal de un modelo.")
+        if st.button("🔍 Probar Estado de la Clave", help="Verifica la conexión en tiempo real con OpenRouter"):
+            with st.spinner("Consultando estado de la clave en OpenRouter..."):
+                valido, msg_estado = verificar_conexion_openrouter(api_key_input)
+                if valido:
+                    st.success(f"✅ {msg_estado}")
+                else:
+                    st.error(f"❌ {msg_estado}")
+        st.caption("⚡ Respaldo automático en cascada si un modelo gratuito está saturado.")
     else:
         st.info("💡 Modo activo: Simulación guiada por el Corpus normativo local.")
 
